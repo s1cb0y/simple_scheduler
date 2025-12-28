@@ -28,6 +28,7 @@ void create_task(char* name, int iters){
 int main(){
     scheduler_init();
     create_task("first", 5);
+
     create_task("second", 3);
     scheduler_run();
     printf("Finished running all tasks \n");

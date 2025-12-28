@@ -44,8 +44,13 @@ void scheduler_create_task(void (*func)(void*), void* arg){
     task->arg = arg;
     task->id = id++;
     task->stack_size = 16 * 1024;
-    task->stack_bottom = malloc(task->stack_size); // TODO check for ARM to be correct
-    task->stack_top = task->stack_bottom + task->stack_size;
+    task->stack_bottom = malloc(task->stack_size);
+    if (!task->stack_bottom) {
+        perror("malloc");
+        exit(1);
+    }
+    /* compute top using byte arithmetic and reserve 16 bytes for alignment/safety */
+    task->stack_top = (void *)((char *)task->stack_bottom + task->stack_size - 16);
     list_insert_end(&priv.task_list, &task->task_list);
 }
 
@@ -96,20 +101,31 @@ static void schedule(void){
     priv.current = next;
     if (next->status == ST_CREATED){
         // assign a new stack pointer, run and exit at the end
+#if defined(__aarch64__)
+        uintptr_t top_val = (uintptr_t)next->stack_top;
+        __asm__ volatile(
+            "mov sp, %x0\n"
+            :
+            : "r"(top_val)
+            : "memory"
+        );
+    #elif defined(__x86_64__) || defined(__amd64__)
         register void *top = next->stack_top;
-       // __asm__ volatile(
-       //         "mov sp, %0 \n"
-       //         :
-       //         :"r"(top) 
-       //         : "memory"
-       // );
         asm volatile(
-			"mov %[rs], %%rsp \n"
-			: [ rs ] "+r" (top) ::
-		);        
-       // run the task function
-        next->status = ST_RUNNING;
-        next->func(next->arg);
+            "mov %[rs], %%rsp \n"
+            : [ rs ] "+r" (top) ::
+        );
+    #else
+    #error "Unsupported architecture for setting stack pointer"
+    #endif
+
+       // run the task function. Use `priv.current` after switching SP
+        priv.current->status = ST_RUNNING;
+        {
+            void (*task_fn)(void *) = priv.current->func;
+            void *task_arg = priv.current->arg;
+            task_fn(task_arg);
+        }
         // stack pointer should be back where we set it, so just returning would be
         // a bad idea -> exit the task correctly
         scheduler_exit_current_task();
