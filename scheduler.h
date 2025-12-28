@@ -97,13 +97,17 @@ static void schedule(void){
     if (next->status == ST_CREATED){
         // assign a new stack pointer, run and exit at the end
         register void *top = next->stack_top;
-        __asm__ volatile(
-                "mov sp, %0 \n"
-                :
-                :"r"(top) 
-                : "memory"
-        );
-        // run the task function
+       // __asm__ volatile(
+       //         "mov sp, %0 \n"
+       //         :
+       //         :"r"(top) 
+       //         : "memory"
+       // );
+        asm volatile(
+			"mov %[rs], %%rsp \n"
+			: [ rs ] "+r" (top) ::
+		);        
+       // run the task function
         next->status = ST_RUNNING;
         next->func(next->arg);
         // stack pointer should be back where we set it, so just returning would be

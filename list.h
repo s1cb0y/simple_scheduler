@@ -4,7 +4,7 @@ struct list_head{
     struct list_head *next, *prev;
 };
 
-static inline void list_init(struct list_head *list){
+void list_init(struct list_head *list){
     list->next = list;
     list->prev = list;
 }
@@ -14,7 +14,7 @@ static inline void list_init(struct list_head *list){
  * @param head List head which we insert into
  * @param item List node to insert
  */
-static inline void list_insert(struct list_head *head, struct list_head *item){
+void list_insert(struct list_head *head, struct list_head *item){
     item->prev = head;
     item->next = head->next;
     item->next->prev = item;
@@ -26,11 +26,11 @@ static inline void list_insert(struct list_head *head, struct list_head *item){
  * @param head List head which we insert into
  * @param item List node to insert
  */
-static inline void list_insert_end(struct list_head *head, struct list_head *item){
+void list_insert_end(struct list_head *head, struct list_head *item){
     item->next = head;
     item->prev = head->prev;
-    head->prev = item;
     head->prev->next = item;
+    head->prev = item;
 }
 
 /**
@@ -43,6 +43,41 @@ static inline void list_insert_end(struct list_head *head, struct list_head *ite
 void list_remove(struct list_head *item){
     item->prev->next = item->next;
 	item->next->prev = item->prev;
+}
+
+/**
+ * @brief Iterate through struct list_head nodes of a list.
+ * @param variable a variable name (of type `struct sc_list_head *`) which is
+ * set to point at each element in the loop body
+ * @param head pointer (of type `struct sc_list_head *`) to the head of the list
+ *
+ * @warning This is probably not what you want! See #sc_list_for_each_entry() for
+ * simpler iteration.
+ *
+ * This macro allows you to iterate through each `struct sc_list_head *` pointer
+ * in a list. Normally, `these` nodes are embedded within a structure at some
+ * offset, which means that you need to do some pointer arithmetic to get at the
+ * data you care about. The #sc_list_for_each_entry() macro takes care of this
+ * for you.
+ *
+ * As the name may imply, this should be used as if it were a specialized for
+ * loop, with a code block to execute for each iteration. The loop may be
+ * terminated via break, skipped via continue, etc. The list pointers MUST NOT
+ * be modified during iteration.
+ */
+#define list_for_each(variable, head)                                       \
+	for (variable = (head)->next; variable != (head); variable = variable->next)
+
+
+int list_len(struct list_head *head)
+{
+	int count = 0;
+	struct list_head *node;
+	list_for_each(node, head)
+	{
+		count += 1;
+	}
+	return count;
 }
 
 /**

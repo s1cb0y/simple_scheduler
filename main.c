@@ -11,9 +11,9 @@ void tester(void *args){
     int i;
     struct tester_args *ta = (struct tester_args *) args;
     for (i = 0; i < ta->iters; i++){
-        printf("task %s: %d", ta->name, i);
+        printf("task %s: %d \n", ta->name, i);
         scheduler_relinquish();
-    } 
+    }
     free(ta);
 }
 
